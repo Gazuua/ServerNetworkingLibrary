@@ -1,0 +1,8 @@
+.vs
+build
+packages
+
+*.lib
+*.idb
+*.pdb
+*.obj
