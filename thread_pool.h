@@ -80,6 +80,7 @@ private:
                 job = std::move(_jobs.front());
                 _jobs.pop();
             }
+
             try
             {
                 job();

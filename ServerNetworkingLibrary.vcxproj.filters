@@ -3,5 +3,6 @@
   <ItemGroup>
     <ClInclude Include="app.h" />
     <ClInclude Include="macro.h" />
+    <ClInclude Include="thread_pool.h" />
   </ItemGroup>
 </Project>
