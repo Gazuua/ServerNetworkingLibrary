@@ -3,71 +3,95 @@
 
 #include <iostream>
 #include <vector>
+#include <thread>
+#include <atomic>
 #include <boost/asio.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
 
-class Server;
-class Client;
+class Service;
 
 NAMESPACE_BEGIN(snl)
 class App
 {
+	using self_t = App;
+
 public:
-	App() = default;
+	App(boost::asio::io_context& ioc)
+		: _ioc(ioc)
+		, _signals(_ioc, SIGINT, SIGTERM)
+		, _timer(_ioc)
+		, _timer_interval(std::chrono::milliseconds(1000))
+		, tick_function(nullptr)
+		, _started(false)
+	{
+	}
+
 	~App()
 	{
-		if (_is_running == true)
-			Stop();
+		if (_started == true)
+			stop();
 	}
 
-	void Init()
+	void run()
 	{
-		_signals.add(SIGTERM);
-		_signals.async_wait([this](const boost::system::error_code& /*ec*/, int /*signum*/)
-			{
-				Stop();
-			});
+		if (_started.exchange(true) == true)
+			return;
 
-		// 타이머 시작 (1초 주기 예시)
-		/*
-		_timer.expires_after(std::chrono::seconds(1));
-		_timer.async_wait(std::bind(&App::OnTimer, this, std::placeholders::_1));
-		*/
+		boost::asio::co_spawn(_signals.get_executor(), signal_handler(), boost::asio::detached);
+		boost::asio::co_spawn(_timer.get_executor(), timer_handler(), boost::asio::detached);
+
+		for (const auto& service : _services)
+			; // service.Start();
+
+		_ioc.run();
 	}
 
-	void Run()
+	void stop()
 	{
-		_is_running = true;
-
-		for (const auto& server : _server_list)
-			;
-			// server.Start();
-
-		for (const auto& client : _client_list)
-			;
-			// client.Start();
-
-		_io_context.run();
-	}
-
-	void Stop()
-	{
-		_timer.cancel();
+		if (_started.exchange(false) == false)
+			return;
 
 		boost::system::error_code ec;
 		_signals.cancel(ec);
+		_timer.cancel();
+		_ioc.stop();
+	}
 
-		_io_context.stop();
+	boost::asio::awaitable<void> signal_handler()
+	{
+		co_await _signals.async_wait(boost::asio::use_awaitable);
+		stop();
+	}	
+
+	boost::asio::awaitable<void> timer_handler()
+	{
+		boost::system::error_code ec;
+		while (true)
+		{
+			ec.clear();
+
+			_timer.expires_after(_timer_interval);
+			co_await _timer.async_wait(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+			if (ec)
+				co_return;
+
+			if (tick_function != nullptr)
+				tick_function();
+		}
 	}
 
 private:
-	boost::asio::io_context _io_context;
-	boost::asio::high_resolution_timer _timer;
-
+	boost::asio::io_context& _ioc;
 	boost::asio::signal_set _signals;
 
-	std::atomic<bool> _is_running{ false };
+	boost::asio::high_resolution_timer _timer;
+	std::chrono::milliseconds _timer_interval;
+	std::function<void()> tick_function;
 
-	std::vector<Server> _server_list{};
-	std::vector<Client> _client_list{};
+	std::atomic<bool> _started;
+
+	std::vector<std::shared_ptr<Service>> _services;
 };
 NAMESPACE_END(snl)
