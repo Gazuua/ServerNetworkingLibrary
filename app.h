@@ -68,13 +68,13 @@ public:
 	boost::asio::awaitable<void> timer_handler()
 	{
 		boost::system::error_code ec;
-		while (true)
+		for(;;)
 		{
 			ec.clear();
 
 			_timer.expires_after(_timer_interval);
 			co_await _timer.async_wait(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
-			if (ec)
+			if (ec) // _timer.cancel() called or Error returned
 				co_return;
 
 			if (tick_function != nullptr)
