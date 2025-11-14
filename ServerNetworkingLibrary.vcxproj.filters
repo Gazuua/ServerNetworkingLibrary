@@ -3,6 +3,8 @@
   <ItemGroup>
     <ClInclude Include="app.h" />
     <ClInclude Include="macro.h" />
-    <ClInclude Include="thread_pool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
 </Project>
