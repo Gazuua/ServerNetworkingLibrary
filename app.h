@@ -21,7 +21,7 @@ class App
 	using self_t = App;
 
 public:
-	App(boost::asio::io_context& ioc)
+	explicit App(boost::asio::io_context& ioc)
 		: _ioc(ioc)
 		, _signals(_ioc, SIGINT, SIGTERM)
 		, _concurrency(std::max(1u, std::thread::hardware_concurrency()))
@@ -94,6 +94,8 @@ public:
 			if (thread.joinable())
 				thread.join();
 		}
+
+		_threads.clear();
 	}
 
 	void wait_signal()
@@ -101,7 +103,7 @@ public:
 		_stop_promise.get_future().wait();
 	}
 
-protected:
+private:
 	boost::asio::awaitable<void> signal_handler()
 	{
 		co_await _signals.async_wait(boost::asio::use_awaitable);
@@ -125,19 +127,25 @@ protected:
 		}
 	}
 
-private:
 	boost::asio::io_context& _ioc;
+
+	// TODO : signal manager로 분리
 	boost::asio::signal_set _signals;
+	std::promise<void> _stop_promise;
+
 	std::size_t _concurrency;
 
+	// TODO : timer manager로 분리
 	boost::asio::high_resolution_timer _timer;
 	std::chrono::milliseconds _timer_interval;
 	std::function<void()> _timer_function;
 
 	std::atomic<bool> _started;
-	std::promise<void> _stop_promise;
 
+	// TODO : service 객체 정의
 	//std::vector<Service> _services;
+
+	// TODO : thread manager 로 분리
 	std::vector<std::thread> _threads;
 };
 NAMESPACE_END(snl)
