@@ -64,7 +64,7 @@ public:
 		boost::asio::co_spawn(_timer.get_executor(), timer_handler(), boost::asio::detached);
 
 		for (const auto& service : _services)
-			service.start();
+			service->start();
 
 		for (size_t count = 0; count < _concurrency; ++count)
 		{
@@ -141,7 +141,7 @@ private:
 	std::atomic<bool> _started;
 
 	// TODO : service 객체 정의
-	std::vector<Service> _services;
+	std::vector<std::shared_ptr<Service>> _services;
 
 	// TODO : thread manager 로 분리
 	std::vector<std::thread> _threads;
