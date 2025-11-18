@@ -1,19 +1,15 @@
 #pragma once
-#include "macro.h"
-
 #include <iostream>
 #include <vector>
 #include <thread>
 #include <atomic>
-#include <functional>
-#include <future>
-#include <csignal>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 
-class Service;
+#include "macro.h"
+#include "service.h"
 
 NAMESPACE_BEGIN(snl)
 class App
@@ -34,10 +30,11 @@ public:
 		std::cout << "current concurrency : " << _concurrency << std::endl;
 	}
 
+	App() = delete;
+
 	~App()
 	{
-		if (_started == true)
-			stop();
+		stop();
 	}
 
 	self_t& set_concurrency(std::size_t concurrency)
@@ -66,8 +63,8 @@ public:
 		boost::asio::co_spawn(_signals.get_executor(), signal_handler(), boost::asio::detached);
 		boost::asio::co_spawn(_timer.get_executor(), timer_handler(), boost::asio::detached);
 
-		//for (const auto& service : _services)
-		//	service.Start();
+		for (const auto& service : _services)
+			service.start();
 
 		for (size_t count = 0; count < _concurrency; ++count)
 		{
@@ -108,6 +105,7 @@ private:
 	{
 		co_await _signals.async_wait(boost::asio::use_awaitable);
 		_stop_promise.set_value();
+		co_return;
 	}	
 
 	boost::asio::awaitable<void> timer_handler()
@@ -143,7 +141,7 @@ private:
 	std::atomic<bool> _started;
 
 	// TODO : service 객체 정의
-	//std::vector<Service> _services;
+	std::vector<Service> _services;
 
 	// TODO : thread manager 로 분리
 	std::vector<std::thread> _threads;
