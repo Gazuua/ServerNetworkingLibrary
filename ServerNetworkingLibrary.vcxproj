@@ -22,6 +22,7 @@
     <ClInclude Include="app.h" />
     <ClInclude Include="macro.h" />
     <ClInclude Include="service.h" />
+    <ClInclude Include="session.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />

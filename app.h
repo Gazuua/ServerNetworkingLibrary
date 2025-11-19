@@ -81,6 +81,9 @@ public:
 		if (_started.exchange(false) == false)
 			return;
 
+		for (const auto& service : _services)
+			service->stop();
+
 		boost::system::error_code ec;
 		_signals.cancel(ec);
 		_timer.cancel();
